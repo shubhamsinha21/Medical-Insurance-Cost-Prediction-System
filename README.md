@@ -131,6 +131,8 @@ Result:
 ---
 
 ## 📦 Project Structure
+
+```
 insurance-cost-predictor/
 │
 ├── app.py
@@ -143,7 +145,7 @@ insurance-cost-predictor/
 │
 ├── .gitignore
 └── ui.png
-
+```
 ---
 
 ## 📊 Feature Importance Insight
@@ -170,10 +172,15 @@ Smoker: Yes
 Predicted Insurance Cost:
 ₹ 25,000 – ₹ 35,000 approx
 
+```
+
 ## 🚀 How to Run Locally
+```
 
 git clone https://github.com/your-username/repo-name.git
 cd repo-name
 pip install -r requirements.txt
 streamlit run app.py
+
+```
 
