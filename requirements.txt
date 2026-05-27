@@ -7,3 +7,4 @@ scipy
 xgboost
 joblib
 streamlit
+shap
