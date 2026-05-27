@@ -3,136 +3,182 @@ import numpy as np
 import pandas as pd
 import joblib
 import matplotlib.pyplot as plt
-import shap
+
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+import io
 
 # -----------------------------
-# Load model + features
+# PAGE CONFIG
+# -----------------------------
+
+st.set_page_config(
+    page_title="Insurance Predictor",
+    page_icon="💰",
+    layout="wide"
+)
+
+# -----------------------------
+# LOAD MODEL + FEATURES
 # -----------------------------
 
 model = joblib.load("insurance_xgb_model.pkl")
 features = joblib.load("model_features.pkl")
 
 # -----------------------------
-# Page config (IMPORTANT for UI)
+# PDF REPORT FUNCTION
 # -----------------------------
 
-st.set_page_config(
-    page_title="Insurance Predictor",
-    page_icon="💰",
-    layout="centered"
-)
+def generate_pdf(data_dict, prediction):
+
+    buffer = io.BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=letter)
+
+    pdf.setFont("Helvetica-Bold", 16)
+    pdf.drawString(50, 750, "Insurance Prediction Report")
+
+    pdf.setFont("Helvetica", 12)
+
+    y = 700
+    for key, value in data_dict.items():
+        pdf.drawString(50, y, f"{key}: {value}")
+        y -= 25
+
+    pdf.drawString(50, y - 20, f"Predicted Cost: ₹ {prediction:,.2f}")
+
+    pdf.save()
+    buffer.seek(0)
+    return buffer
 
 # -----------------------------
-# Header
+# HEADER
 # -----------------------------
 
-st.title("💰 Insurance Charges Predictor")
-st.markdown("Predict medical insurance cost using Machine Learning")
+st.title("💰 Medical Insurance Cost Predictor")
+st.markdown("### End-to-End ML App using XGBoost")
+st.caption("Predict medical insurance cost + download report")
 
 st.divider()
 
 # -----------------------------
-# Input Section (clean layout)
+# LAYOUT
 # -----------------------------
 
-col1, col2 = st.columns(2)
-
-with col1:
-    age = st.number_input("Age", 18, 100, 25)
-    bmi = st.number_input("BMI", 10.0, 50.0, 25.0)
-
-with col2:
-    children = st.number_input("Children", 0, 5, 0)
-    sex = st.selectbox("Gender", ["Male", "Female"])
-    smoker = st.selectbox("Smoker", ["Yes", "No"])
+left, right = st.columns([2, 1])
 
 # -----------------------------
-# Encoding
+# INPUT SECTION
 # -----------------------------
 
-is_female = 1 if sex == "Female" else 0
-is_smoker = 1 if smoker == "Yes" else 0
-bmi_category_obese = 1 if bmi > 30 else 0
-region_southwest = 0
+with left:
+
+    st.subheader("📥 Patient Details")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        age = st.number_input("Age", 18, 100, 25)
+        bmi = st.number_input("BMI", 10.0, 50.0, 25.0)
+
+    with col2:
+        children = st.number_input("Children", 0, 5, 0)
+        sex = st.selectbox("Gender", ["Male", "Female"])
+        smoker = st.selectbox("Smoker", ["Yes", "No"])
+        
+# Regionn assumed for simplicity
+# st.info("Region is assumed as Southwest")
 
 # -----------------------------
-# Prediction button
+# RIGHT PANEL (PREDICTION)
 # -----------------------------
 
+with right:
+
+    st.subheader("📊 Prediction")
+
+    if st.button("Predict Cost 💡", use_container_width=True):
+
+        is_female = 1 if sex == "Female" else 0
+        is_smoker = 1 if smoker == "Yes" else 0
+        bmi_category_obese = 1 if bmi > 30 else 0
+        region_southwest = 0
+
+        input_data = pd.DataFrame([[
+            age,
+            is_female,
+            bmi,
+            children,
+            is_smoker,
+            region_southwest,
+            bmi_category_obese
+        ]], columns=features)
+
+        prediction = model.predict(input_data)[0]
+
+        st.success("Prediction Completed 🎯")
+
+        st.metric(
+            label="Estimated Insurance Cost",
+            value=f"₹ {prediction:,.0f}"
+        )
+
+        # store for report
+        st.session_state["last_input"] = {
+            "Age": age,
+            "BMI": bmi,
+            "Children": children,
+            "Gender": sex,
+            "Smoker": smoker
+        }
+
+        st.session_state["last_prediction"] = prediction
+
+# -----------------------------
+# FEATURE IMPORTANCE
+# -----------------------------
 
 st.divider()
-st.subheader("🧠 SHAP Explainability (Why this prediction?)")
 
-if st.button("Explain Prediction using SHAP"):
+st.subheader("📊 Feature Importance")
 
-    # -----------------------------
-    # Create SHAP explainer
-    # -----------------------------
-    explainer = shap.TreeExplainer(model)
-
-    # reshape input for SHAP
-    input_array = input_data.values
-
-    shap_values = explainer.shap_values(input_array)
-
-    # -----------------------------
-    # Plot explanation for 1 prediction
-    # -----------------------------
-    fig, ax = plt.subplots()
-
-    shap.force_plot(
-        explainer.expected_value,
-        shap_values,
-        input_array,
-        feature_names=features,
-        matplotlib=True
-    )
-
-    st.pyplot(fig)
-
-if st.button("Predict Insurance Cost 💡"):
-
-    input_data = pd.DataFrame([[
-        age,
-        is_female,
-        bmi,
-        children,
-        is_smoker,
-        region_southwest,
-        bmi_category_obese
-    ]], columns=features)
-
-    prediction = model.predict(input_data)[0]
-
-    st.success(f"💰 Estimated Charges: ₹ {prediction:,.2f}")
-
-    st.info("Prediction generated using trained XGBoost model")
-    
-st.divider()
-st.subheader("📊 Feature Importance (Model Insight)")
-
-if st.button("Show Feature Importance"):
+if st.button("Show Feature Importance", use_container_width=True):
 
     importance = model.feature_importances_
 
-    feature_importance_df = pd.DataFrame({
+    df_imp = pd.DataFrame({
         "Feature": features,
         "Importance": importance
-    })
+    }).sort_values(by="Importance", ascending=True)
 
-    feature_importance_df = feature_importance_df.sort_values(
-        by="Importance",
-        ascending=True
-    )
+    fig, ax = plt.subplots(figsize=(10, 5))
 
-    fig, ax = plt.subplots(figsize=(8, 5))
-
-    ax.barh(
-        feature_importance_df["Feature"],
-        feature_importance_df["Importance"]
-    )
-
+    ax.barh(df_imp["Feature"], df_imp["Importance"])
     ax.set_title("XGBoost Feature Importance")
     ax.set_xlabel("Importance Score")
 
     st.pyplot(fig)
+
+# -----------------------------
+# PDF REPORT DOWNLOAD
+# -----------------------------
+
+st.divider()
+
+st.subheader("📄 Download Report")
+
+if "last_prediction" in st.session_state:
+
+    pdf_buffer = generate_pdf(
+        st.session_state["last_input"],
+        st.session_state["last_prediction"]
+    )
+
+    st.download_button(
+        label="Download PDF Report",
+        data=pdf_buffer,
+        file_name="insurance_report.pdf",
+        mime="application/pdf"
+    )
+
+else:
+    st.info("Run prediction first to generate report")
