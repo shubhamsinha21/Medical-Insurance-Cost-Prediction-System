@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import joblib
 import matplotlib.pyplot as plt
+import shap
 
 # -----------------------------
 # Load model + features
@@ -57,6 +58,37 @@ region_southwest = 0
 # -----------------------------
 # Prediction button
 # -----------------------------
+
+
+st.divider()
+st.subheader("🧠 SHAP Explainability (Why this prediction?)")
+
+if st.button("Explain Prediction using SHAP"):
+
+    # -----------------------------
+    # Create SHAP explainer
+    # -----------------------------
+    explainer = shap.TreeExplainer(model)
+
+    # reshape input for SHAP
+    input_array = input_data.values
+
+    shap_values = explainer.shap_values(input_array)
+
+    # -----------------------------
+    # Plot explanation for 1 prediction
+    # -----------------------------
+    fig, ax = plt.subplots()
+
+    shap.force_plot(
+        explainer.expected_value,
+        shap_values,
+        input_array,
+        feature_names=features,
+        matplotlib=True
+    )
+
+    st.pyplot(fig)
 
 if st.button("Predict Insurance Cost 💡"):
 
