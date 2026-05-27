@@ -69,6 +69,7 @@ Multiple regression models were tested:
 | XGBoost | **~0.90** |
 | Gradient Boosting | ~0.89 |
 | Random Forest | ~0.87 |
+| Linear Regression | ~0.80 |
 
 ### Final Selected Model:
 👉 **XGBoost Regressor**
@@ -130,7 +131,7 @@ Result:
 ---
 
 ## 📦 Project Structure
-insurance-project/
+insurance-cost-predictor/
 │
 ├── app.py
 ├── insurance_xgb_model.pkl
@@ -138,7 +139,10 @@ insurance-project/
 ├── requirements.txt
 ├── insurance.csv
 ├── insurancechargeprediction.ipynb
+├── README.md
+│
 ├── .gitignore
+└── ui.png
 
 ---
 
